@@ -7,6 +7,7 @@ import (
 	"github.com/xiaoxuxiansheng/xtimer/common/model/vo"
 	dao "github.com/xiaoxuxiansheng/xtimer/dao/user"
 	"github.com/xiaoxuxiansheng/xtimer/pkg/jwt"
+	"github.com/xiaoxuxiansheng/xtimer/pkg/utils"
 )
 
 type UserService struct {
@@ -18,7 +19,8 @@ func NewUserService(dao *dao.UserDAO) *UserService {
 }
 
 func (t *UserService) SignUp(ctx context.Context, req *vo.SignUpReq) error {
-	po := &po2.User{UserName: req.UserName, Password: req.Password}
+	encPwd := utils.EncryptPassword(req.Password)
+	po := &po2.User{UserName: req.UserName, Password: encPwd}
 	err := t.dao.CreateUser(ctx, po)
 	if err != nil {
 		return err
@@ -34,7 +36,10 @@ func (t *UserService) Login(ctx context.Context, req *vo.LoginReq) (string, erro
 	if len(user) == 0 {
 		return "", errors.New("用户不存在/密码错误")
 	}
-	if user[0].Password != req.Password {
+
+	encPwd := utils.EncryptPassword(req.Password)
+
+	if user[0].Password != encPwd {
 		return "", errors.New("用户不存在/密码错误")
 	}
 
