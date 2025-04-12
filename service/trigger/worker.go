@@ -41,11 +41,6 @@ func (w *Worker) Start(ctx context.Context) {
 }
 
 func (w *Worker) Work(ctx context.Context, minuteBucketKey string, ack func()) error {
-	// log.InfoContextf(ctx, "trigger_1 start: %v", time.Now())
-	// defer func() {
-	// 	log.InfoContextf(ctx, "trigger_1 end: %v", time.Now())
-	// }()
-
 	// 进行为时一分钟的 zrange 处理
 	startTime, err := getStartMinute(minuteBucketKey)
 	if err != nil {
@@ -64,10 +59,6 @@ func (w *Worker) Work(ctx context.Context, minuteBucketKey string, ack func()) e
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
-		// log.InfoContextf(ctx, "trigger_2 start: %v", time.Now())
-		// defer func() {
-		// 	log.InfoContextf(ctx, "trigger_2 end: %v", time.Now())
-		// }()
 		defer wg.Done()
 		if err := w.handleBatch(ctx, minuteBucketKey, startTime, startTime.Add(time.Duration(conf.ZRangeGapSeconds)*time.Second)); err != nil {
 			notifier.Put(err)

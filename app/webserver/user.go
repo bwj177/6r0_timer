@@ -7,6 +7,7 @@ import (
 	"github.com/xiaoxuxiansheng/xtimer/common/model/vo"
 	service "github.com/xiaoxuxiansheng/xtimer/service/webserver"
 	"net/http"
+	"strings"
 )
 
 type UserApp struct {
@@ -23,10 +24,15 @@ func (t *UserApp) SignUp(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, vo.NewCodeMsg(-1, fmt.Sprintf("[SignUp] bind req failed, err: %v", err)))
 		return
 	}
+	if strings.TrimSpace(req.UserName) == "" {
+		c.JSON(http.StatusOK, vo.NewSignUpResp(vo.NewCodeMsg(-1, "请输入用户名")))
+		return
+	}
 
 	err := t.service.SignUp(c.Request.Context(), &req)
 	if err != nil {
 		c.JSON(http.StatusOK, vo.NewSignUpResp(vo.NewCodeMsg(-1, err.Error())))
+		return
 	}
 	c.JSON(http.StatusOK, vo.NewSignUpResp(vo.NewCodeMsgWithMsg("注册成功")))
 }
@@ -40,7 +46,7 @@ func (t *UserApp) Login(c *gin.Context) {
 
 	token, err := t.service.Login(c.Request.Context(), &req)
 	if err != nil || token == "" {
-		c.JSON(http.StatusOK, vo.NewCodeMsg(-1, "密码错误，请重试"))
+		c.JSON(http.StatusOK, vo.NewCodeMsg(-1, "用户不存在/密码错误，请重试"))
 		return
 	}
 	c.JSON(http.StatusOK, vo.NewLoginResp(token, vo.NewCodeMsgWithMsg("登录成功")))

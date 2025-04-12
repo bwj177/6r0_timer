@@ -23,7 +23,7 @@ func (t *UserService) SignUp(ctx context.Context, req *vo.SignUpReq) error {
 	po := &po2.User{UserName: req.UserName, Password: encPwd}
 	err := t.dao.CreateUser(ctx, po)
 	if err != nil {
-		return err
+		return errors.New("用户已存在")
 	}
 	return nil
 }

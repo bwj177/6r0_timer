@@ -2,11 +2,15 @@ package webserver
 
 import (
 	"fmt"
+	"github.com/google/martian/log"
 	"github.com/xiaoxuxiansheng/xtimer/middleware"
+	"math/rand"
 	"net/http"
 	"sync"
+	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/lxn/walk"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	gs "github.com/swaggo/gin-swagger"
 	"github.com/swaggo/gin-swagger/swaggerFiles"
@@ -100,10 +104,36 @@ func (s *Server) RegisterMockRouter() {
 			Word: "hello world!",
 		})
 	})
+
+	s.mockRouter.POST("/test", func(ctx *gin.Context) {
+
+		// 测试数据，用来标识定时任务已执行
+		ShowTimePopup()
+		ctx.JSON(http.StatusOK, map[string]string{"msg": "cron test exec success"})
+	})
+
 }
 
 func (s *Server) RegisterMonitorRouter() {
 	s.engine.Any("/metrics", func(ctx *gin.Context) {
 		promhttp.Handler().ServeHTTP(ctx.Writer, ctx.Request)
 	})
+}
+
+func ShowTimePopup() {
+	// 获取当前时间
+	currentTime := time.Now().Format("2006-01-02 15:04:05")
+	// 构建消息内容
+	message := fmt.Sprintf("现在的时间是：%s", currentTime)
+	log.Infof("cur time cron test:%v", message)
+	// 弹出消息框
+	go func() { walk.MsgBox(nil, "当前时间", message, walk.MsgBoxIconInformation) }()
+
+	// 模拟定时任务执行耗时
+	var DelayTime = 200 * time.Millisecond
+	var RangeTime = 500 * time.Millisecond
+	randRange := int64(RangeTime)
+	randDelay := DelayTime + time.Duration(rand.Int63()%randRange)
+	time.Sleep(randDelay)
+	return
 }

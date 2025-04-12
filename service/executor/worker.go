@@ -15,6 +15,7 @@ import (
 	"github.com/xiaoxuxiansheng/xtimer/pkg/bloom"
 	"github.com/xiaoxuxiansheng/xtimer/pkg/log"
 	"github.com/xiaoxuxiansheng/xtimer/pkg/promethus"
+	utils2 "github.com/xiaoxuxiansheng/xtimer/pkg/utils"
 	"github.com/xiaoxuxiansheng/xtimer/pkg/xhttp"
 )
 
@@ -80,8 +81,13 @@ func (w *Worker) executeAndPostProcess(ctx context.Context, timerID uint, unix i
 
 	execTime := time.Now()
 	resp, err := w.execute(ctx, timer)
+	if err != nil {
+		log.Errorf("exec cronjob failed,err:", err)
+	}
+	overTime := time.Now()
+	costTime := overTime.Sub(execTime)
 	// log.InfoContextf(ctx, "execute timer: %d, resp: %v, err: %v", timerID, resp, err)
-	return w.postProcess(ctx, resp, err, timer.App, timerID, unix, execTime)
+	return w.postProcess(ctx, resp, err, timer.App, timerID, unix, execTime, int64(costTime))
 }
 
 func (w *Worker) execute(ctx context.Context, timer *vo.Timer) (map[string]interface{}, error) {
@@ -89,6 +95,7 @@ func (w *Worker) execute(ctx context.Context, timer *vo.Timer) (map[string]inter
 		resp map[string]interface{}
 		err  error
 	)
+	log.Infof("params:%v", utils2.GetJsonStr(timer))
 	switch strings.ToUpper(timer.NotifyHTTPParam.Method) {
 	case nethttp.MethodGet:
 		err = w.httpClient.Get(ctx, timer.NotifyHTTPParam.URL, timer.NotifyHTTPParam.Header, nil, &resp)
@@ -105,7 +112,7 @@ func (w *Worker) execute(ctx context.Context, timer *vo.Timer) (map[string]inter
 	return resp, err
 }
 
-func (w *Worker) postProcess(ctx context.Context, resp map[string]interface{}, execErr error, app string, timerID uint, unix int64, execTime time.Time) error {
+func (w *Worker) postProcess(ctx context.Context, resp map[string]interface{}, execErr error, app string, timerID uint, unix int64, execTime time.Time, costTime int64) error {
 	go w.reportMonitorData(app, unix, execTime)
 	if err := w.bloomFilter.Set(ctx, utils.GetTaskBloomFilterKey(utils.GetDayStr(time.UnixMilli(unix))), utils.UnionTimerIDUnix(timerID, unix), consts.BloomFilterKeyExpireSeconds); err != nil {
 		log.ErrorContextf(ctx, "set bloom filter failed, key: %s, err: %v", utils.GetTaskBloomFilterKey(utils.GetDayStr(time.UnixMilli(unix))), err)
@@ -118,6 +125,7 @@ func (w *Worker) postProcess(ctx context.Context, resp map[string]interface{}, e
 
 	respBody, _ := json.Marshal(resp)
 	task.Output = string(respBody)
+	task.CostTime = int(costTime)
 
 	if execErr != nil {
 		task.Status = consts.Failed.ToInt()
