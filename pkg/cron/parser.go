@@ -2,6 +2,7 @@ package cron
 
 import (
 	"fmt"
+	"github.com/xiaoxuxiansheng/xtimer/pkg/log"
 	"time"
 
 	"github.com/gorhill/cronexpr"
@@ -16,6 +17,9 @@ func NewCronParser() *CronParser {
 
 func (c *CronParser) IsValidCronExpr(cron string) bool {
 	_, err := cronexpr.Parse(cron)
+	if err != nil {
+		log.Infof("parse cron expression failed, cron expression: %s, err: %s", cron, err.Error())
+	}
 	return err == nil
 }
 
